@@ -1,0 +1,78 @@
+/*
+	common cmd
+*/
+	tar czf [dest.tar.gz] [source]
+	tar xzf /backup/volume_backup.tar.gz 
+	service --status-all 
+	service vsftpd status
+	pa aux
+	cp -r ./sudo chmod -R lws:lws /opt/ti-processor-sdk-linux-am335x-evm-04.02.00.09/EVSE/Projects/DS60-120/Apps/** /opt/ti-processor-sdk-linux-am335x-evm-04.02.00.09/EVSE/Projects/DQD480/Apps/
+
+/*
+	docker
+*/
+docker images
+docker inspect <ID> # 查看镜像
+docker rmi <ID> # 删除镜像
+docker save -o image.tar <IMAGE_NAME> # 保存镜像为文件
+docker load -i image.tar # 从文件加载镜像
+
+docker build -t arm-cross-compile-env .
+
+docker run -d -it --name con1 -p 2222:22 -v opt_volume:/opt -v ${pwd}:/workspace armenv1
+
+docker ps
+docker port <ID>
+docker exec -it <ID> bash
+docker stop <ID>
+docker logs <ID>
+
+docker system df # 查看Docker磁盘使用情况
+docker system prune # 清理无用镜像和容器
+docker stop $(docker ps -aq)  # 停止所有容器
+docker rm $(docker ps -aq)    # 删除所有容器
+
+/*
+	git cmd
+*/
+	git bundle create repo-backup.bundle --all 	# 打包整個專案(includes .git)
+	git clone repo-backup.bundle 								# 然後在新設備上：
+	git clone /workspace/opt/csu3_am335x/ ./ti-processor-sdk-linux-am335x-evm-04.02.00.09
+
+/*
+ 	build wsl kernel
+*/
+	git clone https://github.com/microsoft/WSL2-Linux-Kernel.git
+
+	cd ~/linux-kernel-source
+
+	zcat /proc/config.gz > .config # 從當前運行的 WSL2 內核導出配置
+
+	wget -O .config https://github.com/microsoft/WSL2-Linux-Kernel/raw/linux-msft-wsl-5.15.y/.config		 # 或直接下載 Microsoft 的預設配置
+
+	make olddefconfig
+
+	make menuconfig # Device Drivers → Block devices → RAM block device support (CONFIG_BLK_DEV_RAM) -> 131072(128M)
+
+	make -j$(nproc)
+
+	zcat /proc/config.gz | grep CONFIG_BLK_DEV_RAM_SIZE  # 应显示 131072
+	blockdev --getsize64 /dev/ram0  # 应显示 134217728（128MB）
+
+	# BTF FAIL
+		scripts/config --disable CONFIG_DEBUG_INFO_BTF
+		make olddefconfig
+		make -j$(nproc) vmlinux
+
+	# %USERPROFILE%/.wslconfig 核心位址
+		[wsl2]
+		kernel=D:\\wsl_kernel\\bzImage
+		# 设置交换文件位置（默认为 %USERPROFILE%\AppData\Local\Temp\swap.vhdx）
+		swapfile=C:\\temp\\wsl-swap.vhdx
+
+		# 启用嵌套虚拟化（允许在 WSL 2 中运行虚拟机）
+		nestedVirtualization=true
+
+		# 设置内核位置（默认为微软提供的内核）
+		kernel=C:\\temp\\custom-kernel
+
