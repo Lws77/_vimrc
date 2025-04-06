@@ -1,0 +1,46 @@
+1. 透過以下條件編譯，後導致 docker 無法啟動
+	a. CONFIG_BLK_DEV_RAM_SIZE = 64M -> 128M 
+	b. CONFIG_DEBUG_INFO_BTF = y -> n 無法編譯  
+	c. 在 docker desktop 中編譯
+	
+2. 可能修正項目, 後可以正常執行
+	a. CONFIG_ZSWAP = y
+	b. CONFIG_DEBUG_INFO_BTF = y 
+	c. 在 Ubuntu-22.04 中編譯
+	d. 參考.comfig
+
+//--------------------------------------------------------
+// build wsl kernel
+// -------------------------------------------------------- 
+	git clone https://github.com/microsoft/WSL2-Linux-Kernel.git
+
+	cd ~/linux-kernel-source
+
+	zcat /proc/config.gz > .config # 從當前運行的 WSL2 內核導出配置
+
+	wget -O .config https://github.com/microsoft/WSL2-Linux-Kernel/raw/linux-msft-wsl-5.15.y/.config		 # 或直接下載 Microsoft 的預設配置
+
+	make menuconfig # Device Drivers → Block devices → RAM block device support (CONFIG_BLK_DEV_RAM) -> 131072(128M)
+
+	make -j$(nproc)
+
+	zcat /proc/config.gz | grep CONFIG_BLK_DEV_RAM_SIZE  # 应显示 131072
+	blockdev --getsize64 /dev/ram0  # 应显示 134217728（128MB）
+
+	# BTF FAIL
+		scripts/config --disable CONFIG_DEBUG_INFO_BTF
+		make olddefconfig
+		make -j$(nproc) vmlinux
+
+	# %USERPROFILE%/.wslconfig 修改核心位址
+		[wsl2]
+		kernel=D:\\wsl_kernel\\bzImage
+		# 设置交换文件位置（默认为 %USERPROFILE%\AppData\Local\Temp\swap.vhdx）
+		swapfile=C:\\temp\\wsl-swap.vhdx
+
+		# 启用嵌套虚拟化（允许在 WSL 2 中运行虚拟机）
+		nestedVirtualization=true
+
+		# 设置内核位置（默认为微软提供的内核）
+		kernel=C:\\temp\\custom-kernel
+
